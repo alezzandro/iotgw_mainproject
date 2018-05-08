@@ -107,8 +107,7 @@ objects:
         terminationGracePeriodSeconds: 60
         volumes:
         - name: broker-amq-pvol
-          persistentVolumeClaim:
-            claimName: broker-amq-claim
+          emptyDir: {}
     test: false
     triggers:
     - imageChangeParams:
@@ -128,22 +127,6 @@ objects:
     replicas: 0
     unavailableReplicas: 0
     updatedReplicas: 0
-- apiVersion: v1
-  kind: PersistentVolumeClaim
-  metadata:
-    creationTimestamp: null
-    labels:
-      app: amq63-persistent
-      application: broker
-      template: amq63-persistent
-      xpaas: 1.4.8
-    name: broker-amq-claim
-  spec:
-    accessModes:
-    - ReadWriteMany
-    resources:
-      requests:
-        storage: 1Gi
 - apiVersion: v1
   kind: DeploymentConfig
   metadata:
