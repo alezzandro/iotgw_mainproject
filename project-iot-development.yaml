@@ -194,8 +194,7 @@ objects:
         terminationGracePeriodSeconds: 60
         volumes:
         - name: broker-amq-pvol
-          persistentVolumeClaim:
-            claimName: broker-amq-claim
+          emptyDir: {}
     test: false
     triggers:
     - imageChangeParams:
