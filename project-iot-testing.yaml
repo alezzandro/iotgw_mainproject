@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Template
 metadata:
   creationTimestamp: null
-  name: iot-hub
+  name: iot-testing
 objects:
 - apiVersion: v1
   kind: DeploymentConfig

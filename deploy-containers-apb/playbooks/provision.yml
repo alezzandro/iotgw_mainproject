@@ -1,0 +1,131 @@
+- name: Adding new target_host to the target_group
+  hosts: localhost
+  connection: local
+  tasks:
+  - name: Adding the remote host to the inventory
+    add_host:
+      name: "{{ target_host }}"
+      groups: target_group
+    changed_when: false
+
+  - name: Setting right permissions to .ssh directory
+    file:
+      path: /opt/apb/.ssh
+      state: directory
+      mode: 0700
+
+  - name: Copy the private key in .ssh dir
+    shell: cp /opt/apb/id_rsa /opt/apb/.ssh/
+
+  - name: Setting right permissing for keyfile
+    file:
+      path: /opt/apb/.ssh/id_rsa
+      mode: 0600
+
+- name: Starting containers privisioning on remote RHEL
+  hosts: target_group
+  remote_user: root
+  gather_facts: false
+  vars:
+    token: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJpb3QtdGVzdGluZyIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VjcmV0Lm5hbWUiOiJidWlsZGVyLXRva2VuLTJkOHF4Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQubmFtZSI6ImJ1aWxkZXIiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC51aWQiOiJhYzkyZmM4Ni01Y2ZiLTExZTgtYmYyNy0wMDBkM2ExODk4ODciLCJzdWIiOiJzeXN0ZW06c2VydmljZWFjY291bnQ6aW90LXRlc3Rpbmc6YnVpbGRlciJ9.Pl6hAPzSNnwJGPNEPZmlDcCoskoA8uOByj0viyhHjiJVL1ko4BHDXylc5qBurpO_xgXmtLVj2-rbvh7Lxv1yf-IpewqrgepxMXcAG0tL21DfpNDaD7cGjl48wy807zK8W9Cxtnv4xTOn7G32Ew2w1UocXZ90hZ1zOYLv7uvTjA24KHe7BIGEiqI855LBeIyHhOSDvdl0aeCKz2c1volAR1xTuzJmnE3gil_Zx9OmNRoD-XmizFFMSvrD3OI9txK4Z60j4tFUGOt1QeBbiqtmlBwyPng6JauytVADQVi5i4ZFke9ZNDdGM8AnbCdQDRG4BSfXafLXAppUrQkH69KRWw"
+    registryaddr: "registry-default.apps.52.179.125.95.nip.io"
+  tasks:
+  - name: Log into private registry and force re-authorization
+    docker_login: 
+      username: openshift
+      password: "{{ token }}" 
+      registry: "{{ registryaddr }}"
+
+  - name: Pulling images of latest tag (force)
+    docker_image: 
+      name: "{{item}}"
+      tag: latest
+      force: yes
+    with_items:
+     - jboss-amq-6/amq63-openshift
+     - "{{ registryaddr }}/iot-testing/businessrules"
+     - "{{ registryaddr }}/iot-testing/software-sensor"
+     - "{{ registryaddr }}/iot-testing/routingservice"
+
+  - name: Killing any previous container that I'll deploy next
+    docker_container:
+      name: "{{ item }}"
+      state: absent
+    with_items:
+     - amq63
+     - routingservice
+     - businessrules
+     - software-sensor
+
+  - name: Starting AMQ container on the host
+    docker_container:
+      name: amq63
+      image: jboss-amq-6/amq63-openshift:latest
+      state: started
+      restart: yes
+      env:
+        AMQ_USER: admin 
+        AMQ_PASSWORD: change12_me 
+        AMQ_TRANSPORTS: "openwire, mqtt" 
+        AMQ_QUEUES: message.to.rules 
+        AMQ_SPLIT: true
+        AMQ_MESH_DISCOVERY_TYPE: dns
+        AMQ_MESH_SERVICE_NAME: broker-amq-mesh
+        AMQ_MESH_SERVICE_NAMESPACE: default
+        AMQ_STORAGE_USAGE_LIMIT: "1 gb"
+
+  - pause:
+      seconds: 30
+
+  - name: Starting RoutingService container on the host
+    docker_container:
+      name: routingservice
+      image: "{{ registryaddr }}/iot-testing/routingservice:latest"
+      state: started
+      restart: yes
+      links:
+       - "amq63:amq63"
+      env:
+        SOURCE_AMQ_BROKER: tcp://amq63:61616
+        SOURCE_BROKER_ADMIN_UID: admin
+        SOURCE_BROKER_ADMIN_PASSWD: change12_me
+        BROKER_AMQ_MQTT_HOST: amq63
+
+  - pause:
+      seconds: 10
+
+  - name: Starting BusinessRules container on the host
+    docker_container:
+      name: businessrules
+      image: "{{ registryaddr }}/iot-testing/businessrules:latest"
+      state: started
+      restart: yes
+      links:
+       - "amq63:amq63"
+      env:
+        JAVA_APP_JAR: rules-jar-with-dependencies.jar
+        SOURCE_AMQ_BROKER: tcp://amq63:61616
+        SOURCE_QUEUE: message.to.rules
+        SOURCE_BROKER_ADMIN_UID: admin
+        SOURCE_BROKER_ADMIN_PASSWD: change12_me
+        TARGET_AMQ_BROKER: tcp://172.16.0.5:30616
+        TARGET_QUEUE: message.to.datacenter
+        TARGET_BROKER_ADMIN_UID: admin
+        TARGET_BROKER_ADMIN_PASSWD: change12_me
+
+  - pause:
+      seconds: 10
+
+  - name: Starting SoftwareSensor container on the host
+    docker_container:
+      name: software-sensor
+      image: "{{ registryaddr }}/iot-testing/software-sensor:latest"
+      state: started
+      restart: yes
+      links:
+       - "amq63:amq63"
+      env:
+        JAVA_OPTIONS: "-DhighWater=800 -DlowWater=200 -DbrokerUID=admin -DbrokerPassword=change12_me -DreceiverURL=amq63 -DdeviceType=temperature -DdeviceID=4711 -DinitialValue=70 -Dcount=1000 -DwaitTime=1"
+        JAVA_APP_JAR: softwareSensor-jar-with-dependencies.jar
+
+
