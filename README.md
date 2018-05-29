@@ -17,9 +17,9 @@ The apps will flow from Datacenter to the Hub and Smart Gateways thanks to this 
 
 
 You'll find all the different application projects used in this demo below:
-[Software_Sensor](https://github.com/alezzandro/iotgw_Software_Sensor)
-[Routing_Service](https://github.com/alezzandro/iotgw_Routing_Service)
-[BusinessRules_Service](https://github.com/alezzandro/iotgw_BusinessRules_Service)
+- [Software_Sensor](https://github.com/alezzandro/iotgw_Software_Sensor)
+- [Routing_Service](https://github.com/alezzandro/iotgw_Routing_Service)
+- [BusinessRules_Service](https://github.com/alezzandro/iotgw_BusinessRules_Service)
 
 ## Prerequisites
 
