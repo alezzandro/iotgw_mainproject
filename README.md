@@ -18,11 +18,14 @@ The apps will flow from Datacenter to the Hub and Smart Gateways thanks to this 
 
 ## Prerequisites
 
-First of all you'll need a working Openshift Container Platform 3.9.
+First of all you'll need:
+- a working Openshift Container Platform 3.9
+- an empty RHEL7 properly configured (see below for the steps)
+
 All the brand new installation should come with a pre-configured Ansible Service Broker and Openshift Service Catalog.
 <i>You'll not get it enabled in Minishift or CDK, please refer to their docs for instruction on enabling it.</i>
 
-Then you'll need an empty RHEL7 configured with the following steps:
+As said, you'll need an empty RHEL7 configured with the following steps:
 ```
 # yum remove firewalld
 # yum install -y iptables-services docker docker-python cockpit
@@ -66,7 +69,7 @@ Then you can start the services:
 ```
 
 
-## Setup Steps
+## Openshift Setup Steps
 
 You can run the following commands for creating the base environment on Openshift side:
 ```
@@ -82,4 +85,4 @@ You can run the following commands for creating the base environment on Openshif
 These commands will configure three Openshit's project:
 - Development project with all the tools and pipeline for promoting containers in the Testing environment
 - One dedicated for Testing, no building elements here, it receives updated containers from Dev env.
-- A project dedicated to simulating the Hub Datacenter that usually is placed in the Factory.
+- A project dedicated to simulate the Hub Datacenter that usually is placed in the Factory.
