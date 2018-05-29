@@ -16,6 +16,11 @@ The apps will flow from Datacenter to the Hub and Smart Gateways thanks to this 
 ![Development Flow](/images/development.png)
 
 
+You'll find all the different application projects used in this demo below:
+[Software_Sensor](https://github.com/alezzandro/iotgw_Software_Sensor)
+[Routing_Service](https://github.com/alezzandro/iotgw_Routing_Service)
+[BusinessRules_Service](https://github.com/alezzandro/iotgw_BusinessRules_Service)
+
 ## Prerequisites
 
 First of all you'll need:
@@ -156,8 +161,8 @@ We can now take the public key and deploy it on our Smart Gateway RHEL7 based:
 That's all! You now have an Openshift environment with all the necessary for showing the demo, consisting in:
 1. Development environment with Jenkins' pipelines and three components:
    - Software-Sensor: that will simulate a temperature Sensor
-   - RoutingService: handling the communication and messages dispatching between different AMQ queues
-   - BusinessRulesService: that will filter the data coming from the Sensor, deciding when trigger an alarm (that will be a message on a dedicated queue)
+   - Routing_Service: handling the communication and messages dispatching between different AMQ queues
+   - BusinessRules_Service: that will filter the data coming from the Sensor, deciding when trigger an alarm (that will be a message on a dedicated queue)
 2. Testing environment without Build components, that let you test the software and spawn the containers on a remote RHEL (via APB)
   - This is the right place where to execute the Ansible Playbook Bundle and trigger the remote deployments
 3. Hub environment, that simulates the Factory's datacenter, containing for demo purposes only an AMQ container, handling just one queue where you receive the sensor alarm.
