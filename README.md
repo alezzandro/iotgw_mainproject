@@ -158,7 +158,8 @@ We can now take the public key and deploy it on our Smart Gateway RHEL7 based:
 [alex@smartgw ~]$ chmod 600 .ssh/authorized_keys
 ```
 
-That's all! You now have an Openshift environment with all the necessary for showing the demo, consisting in:
+## That's all!
+You now have an Openshift environment with all the necessary for showing the demo, consisting in:
 1. Development environment with Jenkins' pipelines and three components:
    - Software-Sensor: that will simulate a temperature Sensor
    - Routing_Service: handling the communication and messages dispatching between different AMQ queues
