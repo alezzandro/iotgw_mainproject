@@ -75,14 +75,19 @@ You can run the following commands for creating the base environment on Openshif
 ```
 # git clone https://github.com/alezzandro/iotgw_mainproject
 # oc new-project iot-development
-# oc create -f project-iot-development.yaml
+# oc process -f project-iot-development.yaml | oc create -f
 # oc new-project iot-testing
-# oc create -f project-iot-testing.yaml
+# oc process -f project-iot-testing.yaml | oc create -f
 # oc new-project iot-hub
-# oc create -f project-iot-hub.yaml
+# oc process -f project-iot-hub.yaml | oc create -f
 ```
 
 These commands will configure three Openshit's project:
 - Development project with all the tools and pipeline for promoting containers in the Testing environment
 - One dedicated for Testing, no building elements here, it receives updated containers from Dev env.
 - A project dedicated to simulate the Hub Datacenter that usually is placed in the Factory.
+
+After that we need to give to Jenkins' Service Account of the iot-development project the right of managing resources in the iot-testing project:
+```
+# oc policy add-role-to-user edit system:serviceaccount:iot-development:jenkins -n iot-testing
+```
