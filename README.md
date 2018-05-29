@@ -164,6 +164,6 @@ That's all! You now have an Openshift environment with all the necessary for sho
    - Routing_Service: handling the communication and messages dispatching between different AMQ queues
    - BusinessRules_Service: that will filter the data coming from the Sensor, deciding when trigger an alarm (that will be a message on a dedicated queue)
 2. Testing environment without Build components, that let you test the software and spawn the containers on a remote RHEL (via APB)
-  - This is the right place where to execute the Ansible Playbook Bundle and trigger the remote deployments
+   - This is the right place where to execute the Ansible Playbook Bundle and trigger the remote deployments
 3. Hub environment, that simulates the Factory's datacenter, containing for demo purposes only an AMQ container, handling just one queue where you receive the sensor alarm.
-  - This is the backend for the containers you will deploy on the remote RHEL7
+   - This is the backend for the containers you will deploy on the remote RHEL7
