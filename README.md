@@ -38,7 +38,7 @@ All the brand new installation should come with a pre-configured Ansible Service
 As said, you'll need an empty RHEL7 configured with the following steps:
 ```
 # yum remove -y firewalld
-# yum install -y iptables-services docker docker-python cockpit
+# yum install -y iptables-services docker docker-python cockpit cockpit-docker
 # systemctl enable cockpit docker iptables
 ```
 
@@ -75,7 +75,9 @@ registries = []
 
 Then you can start the services:
 ```
-# systemctl start iptables cockpit docker
+# iptables -F
+# iptables-save > /etc/sysconfig/iptables
+# systemctl restart iptables cockpit docker
 ```
 
 
@@ -174,8 +176,10 @@ Now we got the Service Account token, we can place in the Playbook that we'll us
     token: "YOUR_TOKEN_HERE"
     registryaddr: "YOUR_OCP_ADDRESS_HERE"
 ...
+        TARGET_AMQ_BROKER: tcp://YOUR_INFRA_ADDR:30616
+...
 ```
-As you see by the previous file, you need to replace the token value and the registry address.
+As you see by the previous file, you need to replace the token value, the registry address and the address of one of your infrastructure node (we configured a NodePort for the iot-hub's AMQ container).
 
 On the Openshift side we need to enable the whitelist for the internal Openshift registry and let the Ansible Service Broker to scan for images ending with "-apb".
 In the Ansible Service Broker configmap, add a whitelist rule for the OpenShift registry similar to the one already set up for the Docker Hub registry:

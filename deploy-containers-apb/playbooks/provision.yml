@@ -31,13 +31,13 @@
     registryaddr: "YOUR_OCP_ADDRESS_HERE"
   tasks:
   - name: Log into private registry and force re-authorization
-    docker_login: 
+    docker_login:
       username: openshift
-      password: "{{ token }}" 
+      password: "{{ token }}"
       registry: "{{ registryaddr }}"
 
   - name: Pulling images of latest tag (force)
-    docker_image: 
+    docker_image:
       name: "{{item}}"
       tag: latest
       force: yes
@@ -64,10 +64,10 @@
       state: started
       restart: yes
       env:
-        AMQ_USER: admin 
-        AMQ_PASSWORD: change12_me 
-        AMQ_TRANSPORTS: "openwire, mqtt" 
-        AMQ_QUEUES: message.to.rules 
+        AMQ_USER: admin
+        AMQ_PASSWORD: change12_me
+        AMQ_TRANSPORTS: "openwire, mqtt"
+        AMQ_QUEUES: message.to.rules
         AMQ_SPLIT: true
         AMQ_MESH_DISCOVERY_TYPE: dns
         AMQ_MESH_SERVICE_NAME: broker-amq-mesh
@@ -108,7 +108,7 @@
         SOURCE_QUEUE: message.to.rules
         SOURCE_BROKER_ADMIN_UID: admin
         SOURCE_BROKER_ADMIN_PASSWD: change12_me
-        TARGET_AMQ_BROKER: tcp://172.16.0.5:30616
+        TARGET_AMQ_BROKER: tcp://YOUR_INFRA_ADDR:30616
         TARGET_QUEUE: message.to.datacenter
         TARGET_BROKER_ADMIN_UID: admin
         TARGET_BROKER_ADMIN_PASSWD: change12_me
@@ -127,5 +127,3 @@
       env:
         JAVA_OPTIONS: "-DhighWater=800 -DlowWater=200 -DbrokerUID=admin -DbrokerPassword=change12_me -DreceiverURL=amq63 -DdeviceType=temperature -DdeviceID=4711 -DinitialValue=70 -Dcount=1000 -DwaitTime=1"
         JAVA_APP_JAR: softwareSensor-jar-with-dependencies.jar
-
-
