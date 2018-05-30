@@ -190,10 +190,62 @@ white_list:
 – “.*-apb$”
 ...
 ```
-
-Finally we can start the build of the Ansible Playbook Bundle and proceed with the upload to the Openshift Registry:
+And then we need to rollout a new version of the Ansible Service Broker:
+```
+# oc rollout latest dc/asb -n openshift-ansible-service-broker
 ```
 
+Finally we can start the build of the Ansible Playbook Bundle and proceed with the upload to the Openshift Registry.
+I suggest you to use a machine of the cluster, for example one of the masters.
+First of all we need to login with an administrative user other than system:admin, this is necessary due the needs of a token, so for this demo purposes I've created an user "ocpadmin" with role "ClusterAdmin":
+```
+# oc whoami
+ocpadmin
+```
+Then we can go forward with the APB push process (Please note that for talking with docker daemon you should be root on the machine you're using):
+```
+# yum install -y apb
+
+# cd iotgw_mainproject/deploy-containers-apb/
+
+# apb prepare
+Finished writing dockerfile.
+
+# apb build
+Finished writing dockerfile.
+Building APB using tag: [deploy-containers-apb]
+Successfully built APB image: deploy-containers-apb
+
+# apb push
+version: 1.0
+name: deploy-containers-apb
+description: This is a sample APB application that deploys containers on remote host
+bindable: False
+async: optional
+metadata:
+  displayName: IoT Remote Container Deployer - Testing
+  imageUrl: https://d30y9cdsu7xlg0.cloudfront.net/png/358751-200.png
+plans:
+  - name: default
+    description: This default plan deploys deploy-containers-apb
+    free: True
+    metadata: {}
+    parameters:
+      - name: target_host
+        title: Target Host for containers provisioning
+        type: string
+        default: 172.16.0.7
+        required: true
+
+Found registry IP at: 172.30.41.172:5000
+Finished writing dockerfile.
+Building APB using tag: [172.30.41.172:5000/openshift/deploy-containers-apb]
+Successfully built APB image: 172.30.41.172:5000/openshift/deploy-containers-apb
+Pushing the image, this could take a minute...
+Successfully pushed image: 172.30.41.172:5000/openshift/deploy-containers-apb
+Contacting the ansible-service-broker at: https://asb-1338-openshift-ansible-service-broker.52.16.9.6.nip.io/ansible-service-broker/v2/bootstrap
+Successfully bootstrapped Ansible Service Broker
+Successfully relisted the Service Catalog
 ```
 
 We should see the just uploaded APB in the Service Catalog, as soon as we refresh the Openshift Service Catalog page, as shown in the image below:
@@ -204,11 +256,12 @@ Take a look at one of article I wrote on Red Hat Developer Blog: [Customizing an
 
 We can now take the public key and deploy it on our Smart Gateway RHEL7 based:
 ```
-[alex@smartgw ~]$ mkdir -p .ssh
-[alex@smartgw ~]$ echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC1JONXBS1XQpx7fwU8ttL311/XhFO9l8qOWrPIw3D14Y/ZCgMUkzfnySCR+gSs9pmI+8mO3SizJ0bnwkCrd8y+BlSuVSIGN37cLKc04YMwFhk5aQRpvigaIIyHEp2eakUEEdE2qLs1WoYhRputVxLGsWqzdhdv6vX7CDncgcRDVmdxGANXBdcfn6H7CFYw9f5PP6GVsTQBO4negowBp6q6fN+o3/eoo03BwFBub7J6sWXPOb9txiE6yOMs4+h3SvcTYkPyxEoBPcCkwyb/MhvjTvJl3SDvE1IbcUrruBVfvkfEOQ9mRKj7ZEtrJIS4gwLEOodRMaHRhI2nG5F1wSO1 alex@lenny" >> ,ssh/authorized_keys
-[alex@smartgw ~]$ chmod 700 .ssh
-[alex@smartgw ~]$ chmod 600 .ssh/authorized_keys
+[root@smartgw ~]$ mkdir -p .ssh
+[root@smartgw ~]$ echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC1JONXBS1XQpx7fwU8ttL311/XhFO9l8qOWrPIw3D14Y/ZCgMUkzfnySCR+gSs9pmI+8mO3SizJ0bnwkCrd8y+BlSuVSIGN37cLKc04YMwFhk5aQRpvigaIIyHEp2eakUEEdE2qLs1WoYhRputVxLGsWqzdhdv6vX7CDncgcRDVmdxGANXBdcfn6H7CFYw9f5PP6GVsTQBO4negowBp6q6fN+o3/eoo03BwFBub7J6sWXPOb9txiE6yOMs4+h3SvcTYkPyxEoBPcCkwyb/MhvjTvJl3SDvE1IbcUrruBVfvkfEOQ9mRKj7ZEtrJIS4gwLEOodRMaHRhI2nG5F1wSO1 root@rhel" >> ,ssh/authorized_keys
+[root@smartgw ~]$ chmod 700 .ssh
+[root@smartgw ~]$ chmod 600 .ssh/authorized_keys
 ```
+Please note, we assume that we will connect to the remote host as root user, please test that the SSH key login is working before proceeding to the APB deployment.
 
 ## That's all!
 You now have an Openshift environment with all the necessary for showing the demo, consisting in:
