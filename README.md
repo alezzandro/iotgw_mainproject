@@ -2,9 +2,14 @@
 
 This is the main project for the IoT Solution Demo: "<b>Hybrid Deployments to the EDGE powered by Red Hat Openshift & Red Hat Enterprise Linux</b>".
 
+## Disclaimer and Thanks
 This solution is made on top of "IoT Summit Lab 2016" -> https://github.com/redhat-iot/Virtual_IoT_Gateway
 
 We've taken this demo, originally built as standalone applications to run on a virtual machine or remote raspberry pi device, and we ported it to Openshift, making its middleware apps working on containers.
+So please look at the original Github repositories in the contributor tab for code's credits!
+
+I would like also to thank [Andrea Tarocchi](https://github.com/valdar) and [Luca Bigotta](https://twitter.com/lucabigotta) who helped me in fighting with JBoss Fuse (I'm an infrastructure guy, sorry) and with the demo architecture, respectively.
+
 The main objective of this demo is to show how Red Hat Openshift Container Platform may help you building your applications that you'll run on the "edge" smart gateways.
 The applications developed with Openshift are by default portable thanks to Containers technology, we then added some bit of Ansible thanks to the Openshift Service Catalog and Ansible Service Broker and we'll monitor the deployments through Cockpit, the RHEL's integrated web interface.
 
@@ -32,7 +37,7 @@ All the brand new installation should come with a pre-configured Ansible Service
 
 As said, you'll need an empty RHEL7 configured with the following steps:
 ```
-# yum remove firewalld
+# yum remove -y firewalld
 # yum install -y iptables-services docker docker-python cockpit
 # systemctl enable cockpit docker iptables
 ```
@@ -132,13 +137,58 @@ ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC1JONXBS1XQpx7fwU8ttL311/XhFO9l8qOWrPIw3D1
 
 After that we have to take the token for the default Service Account created in each project, named "builder" and paste it inside our Playbook:
 ```
+# oc project iot-testing
+Now using project "iot-testing" on server "https://masterdnst75****"
 
+# oc get sa
+NAME       SECRETS   AGE
+builder    2         21h
+default    2         21h
+deployer   2         21h
+
+# oc describe sa builder
+Name:                builder
+Namespace:           iot-testing
+Labels:              <none>
+Annotations:         <none>
+Image pull secrets:  builder-dockercfg-65wnj
+Mountable secrets:   builder-token-7dppk
+                     builder-dockercfg-65wnj
+Tokens:              builder-token-7dppk
+                     builder-token-8t6mn
+Events:              <none>
+
+# oc get secret builder-token-7dppk -o yaml | grep token: | awk '{print $2;}' | base64 -d
+eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJpb3QtdGVzdGluZyIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VjcmV0Lm5hbWUiOiJidWlsZGVyLXRva2VuLTdkcHBrIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQubmFtZSI6ImJ1aWxkZXIiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC51aWQiOiI5YjUxYzViOC02MzU4LTExZTgtYmM1OS0wMDBkM2ExYTY2NDIiLCJzdWIiOiJzeXN0ZW06c2VydmljZWFjY291bnQ6aW90LXRlc3Rpbmc6YnVpbGRlciJ9.i5iR6OenEMRD7qj0WBzLdHTlJ2rzlD5vmrLY-suZssCMKviuMtmIvrzt0ZY8coq_1EGZvvmtVEvqzosVNz_DA4MoURutOgVekqjj6dFUz-GlJ4ig_T01FIj1-pdfVVuZQD9fU-Id9a1UQZkegucrUoJwy1XRuAFufyIAAqQLvj6QwHEIX7ANKfi4xf7-PVJ2BhwFByeWm4WdY75YRU7Copj0ps8ieCT4UMN_vJWoC4m5dHFTAhuM5e8c_Bwx-yJP5dAkHV7rgKxTz1g07OPldFdlG-TE-TkFiXkiVN-_-q6Yhr9-xj_
 ```
-
-
-On the Openshift side we need to enable the whitelist for the internal Openshift registry and let the Ansible Service Broker to scan for images ending with "-apb":
+We need this token because the Openshift Registry is secured and it needs a valid account for pulling down container images.
+Now we got the Service Account token, we can place in the Playbook that we'll use for pulling Openshift images on the remote RHEL:
 ```
+# vi deploy-containers-apb/playbooks/provision.yaml
+...
+- name: Starting containers provisioning on remote RHEL
+  hosts: target_group
+  remote_user: root
+  gather_facts: false
+  vars:
+    token: "YOUR_TOKEN_HERE"
+    registryaddr: "YOUR_OCP_ADDRESS_HERE"
+...
+```
+As you see by the previous file, you need to replace the token value and the registry address.
 
+On the Openshift side we need to enable the whitelist for the internal Openshift registry and let the Ansible Service Broker to scan for images ending with "-apb".
+In the Ansible Service Broker configmap, add a whitelist rule for the OpenShift registry similar to the one already set up for the Docker Hub registry:
+```
+# oc edit configmap broker-config -n openshift-ansible-service-broker
+...
+– type: local_openshift
+name: localregistry
+namespaces:
+– openshift
+white_list:
+– “.*-apb$”
+...
 ```
 
 Finally we can start the build of the Ansible Playbook Bundle and proceed with the upload to the Openshift Registry:
@@ -149,6 +199,8 @@ Finally we can start the build of the Ansible Playbook Bundle and proceed with t
 We should see the just uploaded APB in the Service Catalog, as soon as we refresh the Openshift Service Catalog page, as shown in the image below:
 ![Ansible Playbook Bundle](/images/apb.png)
 
+Are you further interested in the Ansible Playbook Bundle and Openshift Service Catalog?
+Take a look at one of article I wrote on Red Hat Developer Blog: [Customizing an OpenShift Ansible Playbook Bundle](https://developers.redhat.com/blog/2018/05/23/customizing-an-openshift-ansible-playbook-bundle/)
 
 We can now take the public key and deploy it on our Smart Gateway RHEL7 based:
 ```
