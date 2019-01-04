@@ -87,11 +87,11 @@ You can run the following commands for creating the base environment on Openshif
 ```
 # git clone https://github.com/alezzandro/iotgw_mainproject
 # oc new-project iot-development
-# oc process -f project-iot-development.yaml | oc create -f
+# oc process -f project-iot-development.yaml | oc create -f -
 # oc new-project iot-testing
-# oc process -f project-iot-testing.yaml | oc create -f
+# oc process -f project-iot-testing.yaml | oc create -f -
 # oc new-project iot-hub
-# oc process -f project-iot-hub.yaml | oc create -f
+# oc process -f project-iot-hub.yaml | oc create -f -
 ```
 
 These commands will configure three Openshit's project:
