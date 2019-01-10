@@ -29,7 +29,7 @@ You'll find all the different application projects used in this demo below:
 ## Prerequisites
 
 First of all you'll need:
-- a working Openshift Container Platform 3.9 with exposed registry ([look here for documentation](https://docs.openshift.com/container-platform/3.9/install_config/registry/securing_and_exposing_registry.html))
+- a working Openshift Container Platform 3.11 with exposed registry ([look here for documentation](https://docs.openshift.com/container-platform/3.11/install_config/registry/securing_and_exposing_registry.html)) If you're using Minishift or CDK: please take a look to Minishift Addons and Minishift Components for enabling Exposed Registry and Ansible Service Broker.
 - an empty RHEL7 properly configured (see below for the steps)
 
 All the brand new installation should come with a pre-configured Ansible Service Broker and Openshift Service Catalog.
