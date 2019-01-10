@@ -38,8 +38,8 @@ All the brand new installation should come with a pre-configured Ansible Service
 As said, you'll need an empty RHEL7 configured with the following steps:
 ```
 # yum remove -y firewalld
-# yum install -y iptables-services docker docker-python cockpit cockpit-docker
-# systemctl enable cockpit docker iptables
+# yum install -y iptables-services podman cockpit
+# systemctl enable cockpit iptables
 ```
 
 Before starting the needed services you have to add your Openshift externally exposed registry into '/etc/containers/registries.conf':
@@ -77,7 +77,6 @@ Then you can start the services:
 ```
 # iptables -F
 # iptables-save > /etc/sysconfig/iptables
-# systemctl restart iptables cockpit docker
 ```
 
 
@@ -181,75 +180,91 @@ Now we got the Service Account token, we can place in the Playbook that we'll us
 ```
 As you see by the previous file, you need to replace the token value, the registry address and the address of one of your infrastructure node (we configured a NodePort for the iot-hub's AMQ container).
 
-On the Openshift side we need to enable the whitelist for the internal Openshift registry and let the Ansible Service Broker to scan for images ending with "-apb".
-In the Ansible Service Broker configmap, add a whitelist rule for the OpenShift registry similar to the one already set up for the Docker Hub registry:
-```
-# oc edit configmap broker-config -n openshift-ansible-service-broker
-...
-– type: local_openshift
-name: localregistry
-namespaces:
-– openshift
-white_list:
-– “.*-apb$”
-...
-```
-And then we need to rollout a new version of the Ansible Service Broker:
-```
-# oc rollout latest dc/asb -n openshift-ansible-service-broker
-```
-
 Finally we can start the build of the Ansible Playbook Bundle and proceed with the upload to the Openshift Registry.
 I suggest you to use a machine of the cluster, for example one of the masters.
 First of all we need to login with an administrative user other than system:admin, this is necessary due the needs of a token, so for this demo purposes I've created an user "ocpadmin" with role "ClusterAdmin":
 ```
 # oc whoami
 ocpadmin
+
+# oc project openshift
 ```
-Then we can go forward with the APB push process (Please note that for talking with docker daemon you should be root on the machine you're using):
+Then we can go forward with the APB process:
 ```
 # yum install -y apb
 
 # cd iotgw_mainproject/deploy-containers-apb/
 
 # apb prepare
-Finished writing dockerfile.
+Wrote b64 encoded [apb.yml] to [Dockerfile]
 
-# apb build
-Finished writing dockerfile.
-Building APB using tag: [deploy-containers-apb]
-Successfully built APB image: deploy-containers-apb
+Create a buildconfig:
+oc new-build --binary=true --name <bundle-name>
 
-# apb push
-version: 1.0
-name: deploy-containers-apb
-description: This is a sample APB application that deploys containers on remote host
-bindable: False
-async: optional
-metadata:
-  displayName: IoT Remote Container Deployer - Testing
-  imageUrl: https://d30y9cdsu7xlg0.cloudfront.net/png/358751-200.png
-plans:
-  - name: default
-    description: This default plan deploys deploy-containers-apb
-    free: True
-    metadata: {}
-    parameters:
-      - name: target_host
-        title: Target Host for containers provisioning
-        type: string
-        default: 172.16.0.7
-        required: true
+Start a build:
+oc start-build --follow --from-dir . <bundle-name>
 
-Found registry IP at: 172.30.41.172:5000
-Finished writing dockerfile.
-Building APB using tag: [172.30.41.172:5000/openshift/deploy-containers-apb]
-Successfully built APB image: 172.30.41.172:5000/openshift/deploy-containers-apb
-Pushing the image, this could take a minute...
-Successfully pushed image: 172.30.41.172:5000/openshift/deploy-containers-apb
-Contacting the ansible-service-broker at: https://asb-1338-openshift-ansible-service-broker.52.16.9.6.nip.io/ansible-service-broker/v2/bootstrap
-Successfully bootstrapped Ansible Service Broker
-Successfully relisted the Service Catalog
+# oc start-build --follow --from-dir . deploy-containers-apb
+Uploading directory "." as binary input for the build ...
+
+Uploading finished
+build.build.openshift.io/deploy-containers-apb-11 started
+Receiving source from STDIN as archive ...
+Step 1/10 : FROM ansibleplaybookbundle/apb-base
+ ---> 1f7ea01fe3a0
+Step 2/10 : LABEL "com.redhat.apb.spec" "dmVyc2lvbjogMS4wCm5hbWU6IGRlcGxveS1jb250YWluZXJzLWFwYgpkZXNjcmlwdGlvbjogVGhpcyBpcyBhIHNhbXBsZSBBUEIgYXBwbGljYXRpb24gdGhhdCBkZXBsb3lzIGNvbnRhaW5lcnMgb24gcmVtb3RlIGhvc3QKYmluZGFibGU6IEZhbHNlCmFzeW5jOiBvcHRpb25hbAptZXRhZGF0YToKICBkaXNwbGF5TmFtZTogSW9UIFJlbW90ZSBDb250YWluZXIgRGVwbG95ZXIgLSBUZXN0aW5nCiAgaW1hZ2VVcmw6IGh0dHBzOi8vZDMweTljZHN1N3hsZzAuY2xvdWRmcm9udC5uZXQvcG5nLzM1ODc1MS0yMDAucG5nCnBsYW5zOgogIC0gbmFtZTogZGVmYXVsdAogICAgZGVzY3JpcHRpb246IFRoaXMgZGVmYXVsdCBwbGFuIGRlcGxveXMgZGVwbG95LWNvbnRhaW5lcnMtYXBiCiAgICBmcmVlOiBUcnVlCiAgICBtZXRhZGF0YToge30KICAgIHBhcmFtZXRlcnM6IAogICAgICAtIG5hbWU6IHRhcmdldF9ob3N0IAogICAgICAgIHRpdGxlOiBUYXJnZXQgSG9zdCBmb3IgY29udGFpbmVycyBwcm92aXNpb25pbmcKICAgICAgICB0eXBlOiBzdHJpbmcKICAgICAgICBkZWZhdWx0OiAxNzIuMTYuMC43CiAgICAgICAgcmVxdWlyZWQ6IHRydWUK"
+ ---> Using cache
+ ---> ef715be4bd28
+Step 3/10 : COPY playbooks /opt/apb/actions
+ ---> 16631bd52abf
+Removing intermediate container f7fe5f13f67d
+Step 4/10 : COPY roles /opt/ansible/roles
+ ---> b68e59ef6ba4
+Removing intermediate container b1c222a54b6e
+Step 5/10 : COPY id_rsa /opt/apb/
+ ---> 62f475cd6409
+Removing intermediate container 82b0090b6062
+Step 6/10 : RUN echo "host_key_checking = False" >> /opt/apb/ansible.cfg
+ ---> Running in ec8a37a9eaf8
+ ---> f93a61b66b4d
+Removing intermediate container ec8a37a9eaf8
+Step 7/10 : RUN chmod -R g=u /opt/{ansible,apb}
+ ---> Running in 0d85f781c415
+ ---> 27fe0b8791f0
+Removing intermediate container 0d85f781c415
+Step 8/10 : USER apb
+ ---> Running in 5c1db3469a45
+ ---> dea4bdfd0386
+Removing intermediate container 5c1db3469a45
+Step 9/10 : ENV "OPENSHIFT_BUILD_NAME" "deploy-containers-apb-11" "OPENSHIFT_BUILD_NAMESPACE" "openshift"
+ ---> Running in c246fbb533ae
+ ---> d746e5826ba1
+Removing intermediate container c246fbb533ae
+Step 10/10 : LABEL "io.openshift.build.name" "deploy-containers-apb-11" "io.openshift.build.namespace" "openshift"
+ ---> Running in a961a25cb9b0
+ ---> 140f3c2e482c
+Removing intermediate container a961a25cb9b0
+Successfully built 140f3c2e482c
+Pushing image 172.30.1.1:5000/openshift/deploy-containers-apb:latest ...
+Pushed 0/17 layers, 0% complete
+Pushed 1/17 layers, 29% complete
+Pushed 2/17 layers, 29% complete
+Pushed 3/17 layers, 29% complete
+Pushed 4/17 layers, 29% complete
+Pushed 5/17 layers, 29% complete
+Pushed 6/17 layers, 35% complete
+Pushed 7/17 layers, 41% complete
+Pushed 8/17 layers, 47% complete
+Pushed 9/17 layers, 53% complete
+Pushed 10/17 layers, 59% complete
+Pushed 11/17 layers, 65% complete
+Pushed 12/17 layers, 71% complete
+Pushed 13/17 layers, 76% complete
+Pushed 14/17 layers, 82% complete
+Pushed 15/17 layers, 88% complete
+Pushed 16/17 layers, 94% complete
+Pushed 17/17 layers, 100% complete
+Push successful
 ```
 
 We should see the just uploaded APB in the Service Catalog, as soon as we refresh the Openshift Service Catalog page, as shown in the image below:
